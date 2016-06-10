@@ -48,7 +48,9 @@ extern "C" void __cxa_pure_virtual() {;}
 
 #include <arduino.h>
 #include <pins_arduino.h> 
-#undef cli
-#define cli()
+#undef F
+#define F(string_literal) ((const PROGMEM char *)(string_literal))
+#undef PSTR
+#define PSTR(string_literal) ((const PROGMEM char *)(string_literal))")
 #include <StringParse.ino>
 #endif

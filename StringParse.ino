@@ -1,3 +1,4 @@
+#include <LiquidCrystal_I2C.h>
 #include <XBee.h>
 
 XBee xbee = XBee();
@@ -12,6 +13,8 @@ String VALUE_SEPERATOR = ":";
 
 String climate_str, gd_str;
 uint8_t* _data;
+
+LiquidCrystal_I2C  lcd(0x3f, 16, 2);
 
 /**
  * Parse received data as strings.
@@ -76,7 +79,14 @@ void setup() {
   HWSERIAL.begin(9600);
   xbee.setSerial(HWSERIAL);
 
-  Serial.println("Running: StringParse.ino\nReady!");
+  Serial.println("Running: StringParse.ino\nInitializing LCD display");
+
+  // initialize LCD passing LCD characters per line and number of lines (16 x 2)
+  lcd.begin();
+  lcd.backlight();
+  lcd.print("StringParse.ino");
+
+  Serial.println("Ready!");
 }
 
 /*

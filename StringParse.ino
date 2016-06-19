@@ -1,68 +1,90 @@
-// program name
-const char * programVersion = "StringParse.ino";
+#include <XBee.h>
 
-// climate data prefixes
-const char TO[] = "TO"; // temperature outside
-const char TA[] = "TA"; // temperature attic
-const char TG[] = "TG"; // temperature garage
-const char PO[] = "PO"; // pressure outside
-const char RH[] = "RH"; // relative humidity
-
-String climate_outside_t = "Outside temp: ";
-
-
-// garage door data prefixes
-const char GD_STATUS[] = "STATUS";
-const char GD_HESA_POS[] = "POS";
-const char GD_HESB_POS[] = "SID";
+XBee xbee = XBee();
+ZBRxResponse rx = ZBRxResponse();
+#define HWSERIAL Serial1
 
 // string delimiters
-const char CLIMATE_DELIMITER[] = "#";
-const char GD_DELIMITER[] = "&";
-const char PARAM_SEPERATOR[] = ",";
-const char VALUE_SEPERATOR[] = ":";
+String CLIMATE_DELIMITER = "#";
+String GD_DELIMITER = "&";
+String PARAM_SEPERATOR = ",";
+String VALUE_SEPERATOR = ":";
 
-char* climate_str = "#TO:97.43,TA:102:23,TG:78.333,PO:1002:223,RH:88.43#";
-char* gdstatus_str = "&STATUS:-1&";
-char* gdsensor_str = "&SID:A,POS:18&";
+String climate_str, gd_str;
+uint8_t* _data;
+
+/**
+ * Parse received data as strings.
+ * Uses delimiters to find the relevant string
+ *  within the data.
+ * 
+ * @param   String  str
+ * @return  void
+ */
+void parseString(String str) {
+  
+  if ( str.startsWith(CLIMATE_DELIMITER) ) {
+    if (-1 != str.indexOf(CLIMATE_DELIMITER, 1)) {
+      climate_str = str.substring(1, str.indexOf(CLIMATE_DELIMITER, 1) );
+      Serial.println(climate_str); 
+      return;
+    }
+  }
+
+  if (str.startsWith(GD_DELIMITER)) {
+    if (-1 != str.indexOf(GD_DELIMITER, 1)) {
+      gd_str = str.substring(1, str.indexOf(GD_DELIMITER, 1));
+      Serial.println(gd_str);
+      return;
+    }
+  }
+
+  // string is unknown or badly formatted
+  Serial.println("Unidentified data.\n");
+  return;
+}
+
+/**
+ * Capture incoming xbee data
+ * Called every loop() tick
+ *
+ * @param   void
+ * @return  void
+ */
+void captureZbRXResponse() {
+  xbee.readPacket();
+  if (xbee.getResponse().isAvailable()) {
+    if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
+      xbee.getResponse().getZBRxResponse(rx);
+
+      _data = rx.getData();
+      parseString(String((char*)_data));
+
+      // reset rx_data array
+      memset(_data, 0, rx.getDataLength());
+    }
+  }
+}
 
 /**
  * SETUP
  */
 void setup() {
-  Serial.begin(115200);
-  while (!Serial);
+  Serial.begin(9600);
+  while (!Serial && (millis() <= 5000));
 
-  Serial.print("Running program: ");
-  Serial.println(programVersion);
-  Serial.println("Ready!");
+  HWSERIAL.begin(9600);
+  xbee.setSerial(HWSERIAL);
+
+  Serial.println("Running: StringParse.ino\nReady!");
 }
 
+/*
+ * LOOP
+ */
 void loop() {
   
-  Serial.print("Test string: ");
-  Serial.println(climate_str);
-  
-  char* found_str = strtok(climate_str, CLIMATE_DELIMITER);
-  
-  // string found, proceed
-  if (0 < strlen(found_str)) {
-    Serial.print("Found string: ");
-    Serial.println(found_str);
-    char* ptr;
-    ptr = strtok(found_str, PARAM_SEPERATOR);
-    while (NULL != ptr) {
-      Serial.println(ptr);
-      ptr = strtok(NULL, PARAM_SEPERATOR);
-    }
-  }
-  
-  Serial.println("Parsing complete.");
-  uint32_t t = 0;
-  while (1) {
-    Serial.print(t);
-    delay(1000);
-    t++;
-  }
-}
+  // check for xbee data
+  captureZbRXResponse();
 
+}
